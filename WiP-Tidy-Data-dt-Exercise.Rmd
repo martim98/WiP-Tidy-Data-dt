@@ -113,10 +113,52 @@ wip <- fread(here("data", "WB-WiP.csv"),
 
 # Continue from here...
 
+```{r 6.1DataWranglingAims}
+wip
+wip[, .N, by=.(V65)]
+
+wip[, c('Indicator.Name', 'Indicator.Code', 'V65') := NULL]
+setnames(wip, c('Country.Name', 'Country.Code'),
+         c('Country', 'Code'))
+head(names(wip))
+
+tail(names(wip))
+
+```
+
+
+```{r melting}
+
+WP <- melt(wip,
+           id.vars = c('Country', 'Code'),
+           measure = patterns('^X'),
+           variable.name = 'YearC',
+           value.name = c('pctWiP'),
+           na.rm = TRUE)
+WP
 
 
 
+```
 
+```{r finalTweaks}
+
+WP[, `:=`(Year=as.numeric(gsub("[^[:digit:].]", '', YearC)),
+          Ratio = (100-pctWiP)/pctWiP)][
+            , YearC:= NULL]
+setcolorder(WP, c('Country', 'Code', 'Year', 'pctWiP',
+                  'Ratio'))
+
+WP
+          
+
+```
+
+```{r ExploratoryAnalysis}
+
+WP[Country %in% 'Portugal']
+
+```
 
 
 ```{r imageEnd, echo=FALSE, out.width="60%"}
