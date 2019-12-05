@@ -103,7 +103,7 @@ Based on our findings above, we can "skip" the first four lines and treat the
 fifth line as column (variable) names. Also note the use of the `check.names`
 argument to ensure that the column names are compliant in R.
 
-```{r readData, collapse=TRUE}
+```{r readData, collapse=TRUE, echo=FALSE, warning=FALSE}
 library(data.table)
 library(here)
 wip <- fread(here("data", "WB-WiP.csv"), 
@@ -113,21 +113,19 @@ wip <- fread(here("data", "WB-WiP.csv"),
 
 # Continue from here...
 
-```{r 6.1DataWranglingAims}
-wip
-wip[, .N, by=.(V65)]
+```{r 6.1DataWranglingAims, echo=FALSE}
+
+
 
 wip[, c('Indicator.Name', 'Indicator.Code', 'V65') := NULL]
 setnames(wip, c('Country.Name', 'Country.Code'),
          c('Country', 'Code'))
-head(names(wip))
 
-tail(names(wip))
 
 ```
 
 
-```{r melting}
+```{r melting, echo=FALSE, warning=FALSE}
 
 WP <- melt(wip,
            id.vars = c('Country', 'Code'),
@@ -135,13 +133,13 @@ WP <- melt(wip,
            variable.name = 'YearC',
            value.name = c('pctWiP'),
            na.rm = TRUE)
-WP
+
 
 
 
 ```
 
-```{r finalTweaks}
+```{r finalTweaks, echo=FALSE}
 
 WP[, `:=`(Year=as.numeric(gsub("[^[:digit:].]", '', YearC)),
           Ratio = (100-pctWiP)/pctWiP)][
@@ -149,14 +147,143 @@ WP[, `:=`(Year=as.numeric(gsub("[^[:digit:].]", '', YearC)),
 setcolorder(WP, c('Country', 'Code', 'Year', 'pctWiP',
                   'Ratio'))
 
-WP
+
           
 
 ```
 
-```{r ExploratoryAnalysis}
+# Portugal
+## Over the years
 
-WP[Country %in% 'Portugal']
+
+
+```{r portugal, echo=FALSE, warning=FALSE}
+
+
+
+library(ggplot2)
+library(magrittr)
+
+WP[Country %in% 'Portugal'] %>%
+ggplot(aes(Year, pctWiP)) + 
+  geom_line() + geom_point() + 
+  scale_y_continuous(limits = c(0, 50)) +
+  ylab('% Women in Parliament') + 
+  ggtitle('Women in Parliament: Portugal')
+
+
+
+```
+
+## Compared with other European Countries
+
+
+
+
+
+
+
+
+
+```{r PortugalEurope, echo=FALSE}
+
+WP[Country %in% c('Portugal', 'Sweden', 'Spain',
+                  'Hungary', 'Romania', 'Finland', 'Germany',
+                  'European Union')] %>%
+  ggplot(aes(Year, pctWiP, colour = Country)) + 
+  geom_line() + 
+  geom_point() + 
+  scale_x_continuous(breaks = seq(1990, 2020, 5)) + 
+  scale_y_continuous(limits = c(0,50),
+                     breaks = seq(0,50,by = 10)) +
+  ggtitle('Womane in Parliament: EU countries') +
+  ylab('% Women in Parliament')
+
+```
+
+##Compared with other Countries
+
+```{r PortugalOthers, echo = FALSE}
+WP[Country %in% c('Portugal', 'United States', 'Brazil',
+                  'China', 'Mexico')] %>%
+  ggplot(aes(Year, pctWiP, colour = Country)) + 
+  geom_line() + 
+  geom_point() + 
+  scale_x_continuous(breaks = seq(1990, 2020, 5)) + 
+  scale_y_continuous(limits = c(0,50),
+                     breaks = seq(0,50,by = 10)) +
+  ggtitle('Women in Parliament: World Countries') +
+  ylab('% Women in Parliament')
+
+
+```
+
+#World
+
+##Top 10 highest values of percentage in WiP
+
+```{r DataExplore#1, echo = FALSE}
+
+WP[order(-pctWiP), head(.SD, 10)]
+
+```
+
+##Highest percentages by year
+```{r dataExplore#2, echo = FALSE}
+
+WP[order(Year, -pctWiP), head(.SD, 1), by = Year]
+```
+
+```{r dataWrangling#2, echo=FALSE, warning = FALSE}
+
+library(countrycode)
+cl <- as.data.table(codelist)[, .(continent, wb)]
+setnames(cl, c('continent', 'wb'),
+         c('Continent', 'Code'))
+cWP <- cl[WP, on='Code']
+
+```
+
+##Highest Decline in Percentage
+
+```{r dataExplorer#3, echo = FALSE}
+
+cWP[Year %in% c(1990,2018) & !is.na(Continent)][
+  order(Year, -pctWiP), head(.SD, 1),
+  by = .(Year, Continent)][
+    order(Continent, Year),
+    .(Continent, Year, Country, pctWiP)]
+
+
+
+```
+
+
+
+### Decline in Percentage
+
+```{r dataExplorer, echo = FALSE}
+
+dWP <- cWP[
+  order(Country, Year), .SD[c(1,.N)],
+  by = Country][, 
+                pctDiff := pctWiP - shift(pctWiP), by=Country][
+                  pctDiff<0][
+                    order(pctDiff)]
+dWP[!is.na(Continent),
+    .(Country, pctWiP, pctDiff)]
+                  
+
+
+```
+
+
+
+### Countries with at least 5% decline plot
+
+```{r dataPlot, eval = FALSE}
+dclpct <- unique(dWP[!is.na(Continent) & 
+                       pctDiff <= -5])
 
 ```
 
