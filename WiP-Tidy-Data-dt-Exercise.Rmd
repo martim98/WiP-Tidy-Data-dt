@@ -108,7 +108,8 @@ library(data.table)
 library(here)
 wip <- fread(here("data", "WB-WiP.csv"), 
              skip = 4, header = TRUE,
-             check.names = TRUE)
+             check.names = TRUE, encoding = 'UTF-8') #encoding
+
 ```
 
 # Continue from here...
@@ -176,13 +177,6 @@ ggplot(aes(Year, pctWiP)) +
 ```
 
 ## Compared with other European Countries
-
-
-
-
-
-
-
 
 
 ```{r PortugalEurope, echo=FALSE}
@@ -278,14 +272,102 @@ dWP[!is.na(Continent),
 ```
 
 
-
 ### Countries with at least 5% decline plot
 
-```{r dataPlot, eval = FALSE}
+```{r dataPlot, echo=FALSE}
+
 dclpct <- unique(dWP[!is.na(Continent) & 
-                       pctDiff <= -5])
+                       pctDiff <= -5]$Country)
+
+WP[Country %in% dclpct] %>%
+  ggplot(aes(Year, pctWiP, colour=Country)) +
+  geom_line() + 
+  geom_point() +
+  scale_x_continuous(breaks = seq(1990,2020,5)) + 
+  scale_y_continuous(limits = c(0,40),
+                     breaks = seq(0, 40, by=10)) +
+  ggtitle('Women in Parliament: Decline in 5%') + 
+  ylab('% Women in Parliament')
 
 ```
+
+## Global Rankings by Year
+
+```{r globalRanking, echo= FALSE}
+
+cWP[!is.na(Continent),
+    `:=` (RankG = rank(-pctWiP), TotalG = .N),
+    by = .(Year)]
+
+cWP[Country=='Portugal',
+    .(Country, Year, pctWiP, Ratio, RankG, TotalG)][
+      order(Year)
+    ]
+```
+
+
+# Portugal in Europe
+## Portugal ranking in Europe
+```{r portugalEurope, echo = FALSE}
+
+cWP[!is.na(Continent),
+    `:=` (RankC = rank(-pctWiP), TotalC = .N),
+    by = .(Continent, Year)]
+
+cWP[Country=='Portugal',
+    .(Country, Year, pctWiP, Ratio, RankC, TotalC)][
+      order(Year)
+    ]
+
+```
+
+## Plot of Portugal's ranking in Europe
+
+```{r plotPortugal, echo = FALSE}
+
+cWP[Country %in% c('Portugal', 'Sweden', 'Spain',
+                   'Hungary', 'Romania', 'Finland', 'Germany')] %>%
+  ggplot(aes(Year, RankC, colour = Country)) + 
+  geom_line() +
+  geom_point() + 
+  scale_x_continuous(breaks=seq(1990,2020,5)) + 
+  scale_y_continuous(limits = c(0,45),
+                     breaks = seq(0,45,by=10)) +
+  ggtitle('Women in Parliament:Ranked') + 
+  ylab('Rank in Europe')
+
+```
+
+## Highest rak by year and continent
+
+```{r yearContinent, echo = FALSE}
+
+cWP[Year %in% c(1990, 2018) & RankC == 1][
+  order(Continent, Year),
+  .(Continent, Year, Country, pctWiP, RankC)
+]
+
+```
+
+#Overall Picture
+
+```{r overallPicture, echo = FALSE}
+
+library(gghighlight)
+
+cWP[is.na(Continent)] %>%
+  ggplot(aes(Year, pctWiP, group =Country)) + 
+  geom_line() + 
+  gghighlight(Country == 'World',
+              use_direct_label = FALSE) + 
+  scale_x_continuous(breaks = seq(1990, 2020, 5)) +
+  scale_y_continuous(limits=c(0,40), 
+                     breaks=seq(0,40,by = 10)) + 
+  ggtitle('Women in Parliament: Global Trends') + 
+  ylab(' %Women in Parliament')
+
+```
+
 
 
 ```{r imageEnd, echo=FALSE, out.width="60%"}
