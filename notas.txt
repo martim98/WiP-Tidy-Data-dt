@@ -1,2 +1,6 @@
 Notas:
 
+ggrepel
+
+package para label as linhas no grafico
+

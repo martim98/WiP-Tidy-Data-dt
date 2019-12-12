@@ -368,6 +368,10 @@ cWP[is.na(Continent)] %>%
 
 ```
 
+#Sessio Info
+```{r}
+sessionInfo()
+```
 
 
 ```{r imageEnd, echo=FALSE, out.width="60%"}
